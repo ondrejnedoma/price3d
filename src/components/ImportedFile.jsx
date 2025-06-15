@@ -2,6 +2,7 @@ import Input from "./Input";
 import Menu from "./Menu";
 import { mdiCancel, mdiClose, mdiLoading } from "@mdi/js";
 import Icon from "@mdi/react";
+import { motion } from "framer-motion";
 import React, { useState } from "react";
 
 export default function ImportedFile({
@@ -33,11 +34,17 @@ export default function ImportedFile({
     }
   };
   return (
-    <div className="w-full rounded-xl bg-neutral-50 px-4 py-2 ring ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700">
-      <div className="flex flex-row items-center justify-between">
-        <h2 className="text-2xl font-medium">{file.file.name}</h2>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      layout
+      className="w-full rounded-xl bg-neutral-50 px-4 py-2 ring ring-neutral-300 dark:bg-neutral-900 dark:ring-neutral-700"
+    >
+      <div className="flex flex-row items-center justify-between gap-2">
+        <h2 className="truncate text-2xl font-medium">{file.file.name}</h2>
         <div
-          className="cursor-pointer"
+          className="cursor-pointer transition hover:text-neutral-400"
           onClick={() => handleRemoveFile(file.id)}
         >
           <Icon size={1} path={mdiClose} />
@@ -47,11 +54,8 @@ export default function ImportedFile({
         <Icon spin size={2} path={mdiLoading} />
       ) : (
         <>
-          <p className="">{formatNumberWithSpaces(file.volume)} mm³</p>
-          <p className="-mt-1">
-            {formatNumberWithSpaces(file.surfaceArea)} mm²
-          </p>
-          <div className="mt-4 flex flex-col gap-3">
+          <img className="mx-auto w-40" src={file.previewImage} />
+          <div className="flex flex-col gap-3">
             <Input
               type="number"
               value={file.amount}
@@ -133,13 +137,25 @@ export default function ImportedFile({
               }
               min={0}
             >
-              Price (money/kg)
+              Price (per kg)
             </Input>
-            <p>{file.weight}g</p>
-            <p>{file.price} money</p>
+          </div>
+          <div className="mt-6">
+            <div className="flex flex-row items-center justify-between">
+              <p className="text-xl">Weight</p>
+              <p className="text-right text-2xl font-semibold text-blue-500">
+                {file.weight}g
+              </p>
+            </div>
+            <div className="flex flex-row items-center justify-between">
+              <p className="text-xl">Price</p>
+              <p className="text-right text-2xl font-semibold text-blue-500">
+                {file.price}
+              </p>
+            </div>
           </div>
         </>
       )}
-    </div>
+    </motion.div>
   );
 }

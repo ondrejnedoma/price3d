@@ -1,7 +1,19 @@
-import { Vector3 } from "three";
-import { STLLoader } from "three-stdlib";
-import { OBJLoader } from "three-stdlib";
-import { ThreeMFLoader } from "three-stdlib";
+import {
+  Scene,
+  OrthographicCamera,
+  WebGLRenderer,
+  Vector3,
+  Mesh,
+  MeshNormalMaterial,
+  AmbientLight,
+  DirectionalLight,
+  Box3,
+  MeshStandardMaterial,
+  MeshPhongMaterial,
+} from "three";
+import { ThreeMFLoader } from "three/examples/jsm/loaders/3MFLoader.js";
+import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
+import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import * as BufferGeometryUtils from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 const readFileAsArrayBuffer = (file) => {
@@ -94,9 +106,57 @@ async function load3MF(file) {
   return BufferGeometryUtils.mergeGeometries(geometries, false);
 }
 
+function renderGeometryToImage(geometry, width = 512, height = 512) {
+  const scene = new Scene();
+  const renderer = new WebGLRenderer({
+    preserveDrawingBuffer: true,
+    alpha: true,
+  });
+  renderer.setClearColor(0x000000, 0); // Transparent background
+  renderer.setSize(width, height);
+
+  const material = new MeshStandardMaterial({
+    color: 0x3b82f6,
+    flatShading: true,
+  });
+  const mesh = new Mesh(geometry, material);
+  scene.add(mesh);
+
+  // Auto-center and frame the geometry
+  const box = new Box3().setFromObject(mesh);
+  const center = box.getCenter(new Vector3());
+  const size = box.getSize(new Vector3()).length();
+  mesh.position.sub(center);
+
+  const aspect = width / height;
+  const d = size * 0.5;
+  const camera = new OrthographicCamera(
+    -d * aspect, // left
+    d * aspect, // right
+    d, // top
+    -d, // bottom
+    0.1, // near
+    1000, // far
+  );
+  camera.up.set(0, 0, 1);
+  camera.position.set(d, d, d);
+  camera.lookAt(0, 0, 0);
+  camera.updateProjectionMatrix();
+
+  // Lighting
+  scene.add(new AmbientLight(0xffffff, 0.3));
+  const light = new DirectionalLight(0xffffff, 1.5);
+  light.position.set(2, 5, 3);
+  scene.add(light);
+
+  renderer.render(scene, camera);
+  return renderer.domElement.toDataURL(); // base64 image string
+}
+
 export default async function calc(file) {
-  const name = file.name;
+  const name = file.name.toLowerCase();
   let geometry;
+
   if (name.endsWith(".stl")) {
     geometry = await loadSTL(file);
   } else if (name.endsWith(".obj")) {
@@ -104,9 +164,14 @@ export default async function calc(file) {
   } else if (name.endsWith(".3mf")) {
     geometry = await load3MF(file);
   } else {
-    console.error("Unsupported file type. Use STL, OBJ, or 3MF.");
-    process.exit(1);
+    throw new Error("Unsupported file type. Use STL, OBJ, or 3MF.");
   }
 
-  return computeMetrics(geometry);
+  const metrics = computeMetrics(geometry);
+  const imageData = renderGeometryToImage(geometry);
+
+  return {
+    ...metrics,
+    previewImage: imageData, // base64 PNG string
+  };
 }
